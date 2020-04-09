@@ -14,33 +14,6 @@ function CreateTeam(coninchePlayer1, coinchePlayer2)
     return team
 end
 
-function CreateRoundInfo(team, atoutColor, contract, isCoinche)
-    return {
-        team = team,
-        otherTeam = (team == TeamNS) and TeamNS or TeamEW,
-        atoutColor = atoutColor,
-        contract = contract,
-        isCoinche = isCoinche
-    }
-end
-
-function EndRound(roundInfo)
-    if roundInfo.team.roundScore > 81 and roundInfo.team.roundScore >
-        roundInfo.contract then
-        roundInfo.team.gameScore = roundInfo.team.gameScore + roundInfo.contract
-    else
-        roundInfo.otherTeam.gameScore = roundInfo.otherTeam.gameScore + 160
-    end
-
-    if TeamNS.gameScore >= 1000 then
-        EndGame(TeamNS)
-    elseif TeamEW.gameScore >= 1000 then
-        EndGame(TeamEW)
-    end
-end
-
-function EndGame(winnerTeam) end
-
 local masterDeck = getObjectFromGUID("deckGuid")
 masterDeck.hide()
 local gameDeck = masterDeck.clone();
@@ -56,18 +29,52 @@ Teams = {TeamNS, TeamEW}
 
 PlayersInOrder = {PlayerN, PlayerE, PlayerS, PlayerW}
 
-function GetNextPlayer(currentPlayerIndex)
-    return currentPlayerIndex
+function GetNextPlayerIndex(currentPlayerIndex)
+    return (currentPlayerIndex % 4) + 1
 end
 
-local firstPlayerOfRound = 1
-
-local function initGame()
+function GameLoop()
     gameDeck.shuffle()
-    for i, team in pairs(Teams) do
-        team.gameScore = 0
-        team.roundScore = 0
+    TeamNS.gameScore = 0
+    TeamEW.gameScore = 0
+
+    local firstPlayerIndex = 1
+    while true do
+        local roundInfo = AnnonceLoop(firstPlayerIndex)
+        RoundLoop(roundInfo)
+
+        if TeamNS.gameScore >= 1000 or TeamEW.gameScore >= 1000 then
+            break
+        else
+            firstPlayerIndex = GetNextPlayerIndex(firstPlayerIndex)
+        end
     end
+    local winner = (TeamNS.gameScore >= 1000) and TeamNS or TeamEW;
 end
 
-local function initRound() for i, team in pairs(Teams) do team.roundScore = 0 end end
+function AnnonceLoop(firstPlayerIndex) end
+
+function CreateRoundInfo(team, atoutColor, contract, isCoinche)
+    return {
+        team = team,
+        otherTeam = (team == TeamNS) and TeamNS or TeamEW,
+        atoutColor = atoutColor,
+        contract = contract,
+        isCoinche = isCoinche
+    }
+end
+
+function RoundLoop(roundInfo)
+    local runningTeam = roundInfo.team
+    local otherTeam = roundInfo.otherTeam
+    otherTeam.roundScore = 0
+    runningTeam.roundScore = 0
+
+    if runningTeam.roundScore > 81 and runningTeam.roundScore >
+        roundInfo.contract then
+        runningTeam.gameScore = runningTeam.gameScore + roundInfo.contract
+    else
+        otherTeam.gameScore = otherTeam.gameScore + 160
+    end
+
+end

@@ -40,6 +40,34 @@ function CompareCards(firstCard, secondCard, expectedColor, atoutColor)
     end
 end
 
+function GetCardValue(card, atoutColor)
+    if card.color == atoutColor and card.figure == "Jack" then
+        return 20
+    elseif card.color == atoutColor and card.figure == "9" then
+        return 14
+    elseif card.figure == "1" then
+        return 11
+    elseif card.figure == "10" then
+        return 10
+    elseif card.figure == "King" then
+        return 4
+    elseif card.figure == "Queen" then
+        return 3
+    elseif card.figure == "Jack" then
+        return 2
+    else
+        return 0
+    end
+end
+
+function ComputeScore(cards, atoutColor)
+    local score = 0
+    for _, card in pairs(cards) do
+        score = score + GetCardValue(card, atoutColor)
+    end
+    return score
+end
+
 function CreateCoinchePlayer(color)
     return {player = Player[color], color = color, hand = {}, team = nil}
 end

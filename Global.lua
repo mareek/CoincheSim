@@ -40,6 +40,18 @@ function CompareCards(firstCard, secondCard, expectedColor, atoutColor)
     end
 end
 
+function GetTurnHighestPlayer(turnInfos)
+    local highest = nil
+    for player, card in pairs(turnInfos.cardsByPlayer) do
+        if highest == nil or
+            CompareCards(card, highest.card, turnInfos.expectedColor,
+                         turnInfos.atoutColor) > 0 then
+            highest = {card = card, player = player}
+        end
+    end
+    return PlayersByName[highest.player]
+end
+
 function GetCardValue(card, atoutColor)
     if card.color == atoutColor and card.figure == "Jack" then
         return 20
@@ -68,8 +80,14 @@ function ComputeScore(cards, atoutColor)
     return score
 end
 
-function CreateCoinchePlayer(color)
-    return {player = Player[color], color = color, hand = {}, team = nil}
+function CreateCoinchePlayer(color, index)
+    return {
+        player = Player[color],
+        color = color,
+        index = index,
+        hand = {},
+        team = nil
+    }
 end
 
 function CreateTeam(coninchePlayer1, coinchePlayer2)
@@ -88,16 +106,23 @@ local masterDeck = getObjectFromGUID("deckGuid")
 masterDeck.hide()
 local gameDeck = masterDeck.clone();
 
-PlayerN = CreateCoinchePlayer("Green")
-PlayerE = CreateCoinchePlayer("Red")
-PlayerS = CreateCoinchePlayer("Blue")
-PlayerW = CreateCoinchePlayer("Yellow")
+PlayerN = CreateCoinchePlayer("Green", 1)
+PlayerE = CreateCoinchePlayer("Red", 2)
+PlayerS = CreateCoinchePlayer("Blue", 3)
+PlayerW = CreateCoinchePlayer("Yellow", 4)
 
 TeamNS = CreateTeam(PlayerN, PlayerS)
 TeamEW = CreateTeam(PlayerE, PlayerW)
 Teams = {TeamNS, TeamEW}
 
 PlayersInOrder = {PlayerN, PlayerE, PlayerS, PlayerW}
+
+PlayersByName = {
+    PlayerN = PlayerN,
+    PlayerE = PlayerE,
+    PlayerS = PlayerS,
+    PlayerW = PlayerW
+}
 
 function GetNextPlayerIndex(currentPlayerIndex)
     return (currentPlayerIndex % 4) + 1
@@ -160,11 +185,23 @@ function RoundLoop(roundInfo, firstPlayerIndex)
     local otherTeam = roundInfo.otherTeam
     otherTeam.roundScore = 0
     runningTeam.roundScore = 0
+    local currentPlayerIndex = firstPlayerIndex
+    for i = 1, 8 do
+        local turnInfos = PlayTurn(currentPlayerIndex)
+        local turnWinner = GetTurnHighestPlayer(turnInfos)
+        turnWinner.team.roundScore = turnWinner.team.roundScore +
+                                         ComputeScore(turnInfos.cardsByPlayer)
+        currentPlayerIndex = turnWinner.index
+    end
 
     if runningTeam.roundScore > 81 and runningTeam.roundScore >
         roundInfo.contract then
-        runningTeam.gameScore = runningTeam.gameScore + roundInfo.contract
+        local score = roundInfo.contract * (roundInfo.isCoinche and 2 or 1)
+        runningTeam.gameScore = runningTeam.gameScore + score
+        RoundWon(roundInfo)
     else
-        otherTeam.gameScore = otherTeam.gameScore + 160
+        local score = roundInfo.isCoinche and (roundInfo.contract * 2) or 160
+        otherTeam.gameScore = otherTeam.gameScore + score
+        RoundLost(roundInfo)
     end
 end

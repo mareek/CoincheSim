@@ -1,3 +1,45 @@
+AtoutOrderMap = BuildIndexOfMap({
+    "Jack", "9", "1", "10", "King", "Queen", "8", "7"
+})
+NonAtoutOrderMap = BuildIndexOfMap({
+    "1", "10", "King", "Queen", "Jack", "9", "8", "7"
+})
+
+function BuildIndexOfMap(array)
+    local indexOfMap = {}
+    for k, v in pairs(array) do indexOfMap[v] = k end
+    return indexOfMap
+end
+
+function CompareCards(firstCard, secondCard, expectedColor, atoutColor)
+    if firstCard.color == secondCard.color then
+        local function sameColorCompare(orderMap)
+            if orderMap[firstCard.figure] < orderMap[secondCard.figure] then
+                return 1
+            else
+                return -1
+            end
+        end
+        if firstCard.color == atoutColor then
+            return sameColorCompare(AtoutOrderMap)
+        else
+            return sameColorCompare(NonAtoutOrderMap)
+        end
+    else
+        if firstCard.color == atoutColor then
+            return 1
+        elseif secondCard.color == atoutColor then
+            return -1
+        elseif firstCard.color == expectedColor then
+            return 1
+        elseif secondCard.color == expectedColor then
+            return -1
+        else
+            return 0
+        end
+    end
+end
+
 function CreateCoinchePlayer(color)
     return {player = Player[color], color = color, hand = {}, team = nil}
 end
@@ -41,9 +83,7 @@ function GameLoop()
     local firstPlayerIndex = 1
     while TeamNS.gameScore < 1000 and TeamEW.gameScore < 1000 do
         local roundInfo = AnnonceLoop(firstPlayerIndex)
-        if roundInfo ~= nil then
-            RoundLoop(roundInfo, firstPlayerIndex)
-        end
+        if roundInfo ~= nil then RoundLoop(roundInfo, firstPlayerIndex) end
         firstPlayerIndex = GetNextPlayerIndex(firstPlayerIndex)
     end
 
@@ -99,5 +139,4 @@ function RoundLoop(roundInfo, firstPlayerIndex)
     else
         otherTeam.gameScore = otherTeam.gameScore + 160
     end
-
 end

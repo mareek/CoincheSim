@@ -49,7 +49,7 @@ function GetTurnHighestPlayer(turnInfos)
             highest = {card = card, player = player}
         end
     end
-    return PlayersByName[highest.player]
+    return PlayersByColor[highest.player]
 end
 
 function GetCardValue(card, atoutColor)
@@ -117,12 +117,8 @@ Teams = {TeamNS, TeamEW}
 
 PlayersInOrder = {PlayerN, PlayerE, PlayerS, PlayerW}
 
-PlayersByName = {
-    PlayerN = PlayerN,
-    PlayerE = PlayerE,
-    PlayerS = PlayerS,
-    PlayerW = PlayerW
-}
+PlayersByColor = {}
+for _, player in pairs(PlayersInOrder) do PlayersByColor[player.color] = player end
 
 function GetNextPlayerIndex(currentPlayerIndex)
     return (currentPlayerIndex % 4) + 1
@@ -141,6 +137,7 @@ function GameLoop()
     end
 
     local winner = (TeamNS.gameScore >= 1000) and TeamNS or TeamEW;
+    GameWon(winner)
 end
 
 function AnnonceLoop(firstPlayerIndex)
@@ -204,4 +201,24 @@ function RoundLoop(roundInfo, firstPlayerIndex)
         otherTeam.gameScore = otherTeam.gameScore + score
         RoundLost(roundInfo)
     end
+end
+
+function PlayTurn(firstPlayerIndex, atoutColor)
+    local currentPlayer = PlayersInOrder[firstPlayerIndex]
+    local card = PlayCard(currentPlayer)
+    local turnInfo = {
+        expectedColor = card.color,
+        atoutColor = atoutColor,
+        cardsByPlayer = {}
+    }
+    turnInfo.cardsByPlayer[currentPlayer.color] = card
+
+    local currentPlayerIndex = GetNextPlayerIndex(firstPlayerIndex)
+    while currentPlayerIndex ~= firstPlayerIndex do
+        currentPlayer = PlayersInOrder[currentPlayerIndex]
+        card = PlayCard(currentPlayer, turnInfo)
+        turnInfo.cardsByPlayer[currentPlayer.color] = card
+    end
+
+    return turnInfo
 end

@@ -11,7 +11,7 @@ function BuildIndexOfMap(array)
     return indexOfMap
 end
 
-function CompareCards(firstCard, secondCard, expectedColor, atoutColor)
+function CompareCards(firstCard, secondCard, turnInfo)
     if firstCard.color == secondCard.color then
         local function sameColorCompare(orderMap)
             if orderMap[firstCard.figure] < orderMap[secondCard.figure] then
@@ -20,19 +20,19 @@ function CompareCards(firstCard, secondCard, expectedColor, atoutColor)
                 return -1
             end
         end
-        if firstCard.color == atoutColor then
+        if firstCard.color == turnInfo.atoutColor then
             return sameColorCompare(AtoutOrderMap)
         else
             return sameColorCompare(NonAtoutOrderMap)
         end
     else
-        if firstCard.color == atoutColor then
+        if firstCard.color == turnInfo.atoutColor then
             return 1
-        elseif secondCard.color == atoutColor then
+        elseif secondCard.color == turnInfo.atoutColor then
             return -1
-        elseif firstCard.color == expectedColor then
+        elseif firstCard.color == turnInfo.expectedColor then
             return 1
-        elseif secondCard.color == expectedColor then
+        elseif secondCard.color == turnInfo.expectedColor then
             return -1
         else
             return 0
@@ -40,17 +40,21 @@ function CompareCards(firstCard, secondCard, expectedColor, atoutColor)
     end
 end
 
-function GetTurnHighestPlayer(turnInfos)
+function GetTurnHighest(turnInfo)
     local highest = nil
-    for player, card in pairs(turnInfos.cardsByPlayer) do
-        if highest == nil or
-            CompareCards(card, highest.card, turnInfos.expectedColor,
-                         turnInfos.atoutColor) > 0 then
+    for player, card in pairs(turnInfo.cardsByPlayer) do
+        if highest == nil or CompareCards(card, highest.card, turnInfo) > 0 then
             highest = {card = card, player = player}
         end
     end
-    return PlayersByColor[highest.player]
+    return highest
 end
+
+function GetTurnHighestPlayer(turnInfo)
+    return PlayersByColor[GetTurnHighest(turnInfo).player]
+end
+
+function GetTurnHighestCard(turnInfo) return GetTurnHighest(turnInfo).card end
 
 function GetCardValue(card, atoutColor)
     if card.color == atoutColor and card.figure == "Jack" then
@@ -137,7 +141,6 @@ function GameLoop()
     end
 
     local winner = (TeamNS.gameScore >= 1000) and TeamNS or TeamEW;
-    GameWon(winner)
 end
 
 function AnnonceLoop(firstPlayerIndex)
@@ -184,10 +187,11 @@ function RoundLoop(roundInfo, firstPlayerIndex)
     runningTeam.roundScore = 0
     local currentPlayerIndex = firstPlayerIndex
     for i = 1, 8 do
-        local turnInfos = PlayTurn(currentPlayerIndex)
-        local turnWinner = GetTurnHighestPlayer(turnInfos)
+        local turnInfo = PlayTurn(currentPlayerIndex)
+        local turnWinner = GetTurnHighestPlayer(turnInfo)
         turnWinner.team.roundScore = turnWinner.team.roundScore +
-                                         ComputeScore(turnInfos.cardsByPlayer)
+                                         ComputeScore(turnInfo.cardsByPlayer)
+        CleanBoard()
         currentPlayerIndex = turnWinner.index
     end
 
@@ -221,4 +225,63 @@ function PlayTurn(firstPlayerIndex, atoutColor)
     end
 
     return turnInfo
+end
+
+function PlayCard(player, turnInfo)
+    local allowedCards = {}
+    for _, card in pairs(player.hand) do
+        if IsCardAllowed(card, player, turnInfo) then
+            card.highlight()
+            allowedCards[#allowedCards + 1] = card
+        end
+    end
+    
+    local playedCard = nil --get the card the player just played
+
+    for _, card in allowedCards do card.unhighlight() end
+
+    return playedCard
+end
+
+function IsCardAllowed(card, player, turnInfo)
+    if turnInfo == nil then
+        return true
+    elseif card.color ~= turnInfo.expectedColor and
+        HasColorInHand(player, turnInfo.expectedColor) then
+        return false
+    elseif card.color ~= turnInfo.atoutColor then
+        if card.color == turnInfo.expectedColor then
+            return true
+        elseif GetTurnHighestPlayer(turnInfo).team == player.team then
+            return true
+        elseif not HasColorInHand(player, turnInfo.atoutColor) then
+            return true
+        else
+            return false
+        end
+    else
+        -- Atout
+        local highestCard = GetTurnHighestCard(turnInfo)
+        if highestCard.color ~= turnInfo.atoutColor then
+            return true
+        elseif CompareCards(card, highestCard, turnInfo) > 0 then
+            return true
+        else
+            for _, handCard in pairs(player.hand) do
+                if handCard.color == highestCard.color and
+                    CompareCards(handCard, highestCard, turnInfo) > 0 then
+                    return false
+                end
+            end
+            return true
+        end
+    end
+end
+
+function HasColorInHand(player, color)
+    for _, card in pairs(player.hand) do
+        if card.color == color then return true end
+    end
+
+    return false
 end

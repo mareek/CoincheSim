@@ -1,3 +1,5 @@
+MasterDeckGuid = ""
+
 AtoutOrderMap = BuildIndexOfMap({
     "Jack", "9", "1", "10", "King", "Queen", "8", "7"
 })
@@ -84,60 +86,56 @@ function ComputeScore(cards, atoutColor)
     return score
 end
 
-function CreateCoinchePlayer(color, index)
-    return {
-        player = Player[color],
-        color = color,
-        index = index,
-        hand = {},
-        team = nil
-    }
+function CreateCoinchePlayer(color)
+    return {player = Player[color], color = color, hand = {}, team = nil}
 end
 
-function CreateTeam(coninchePlayer1, coinchePlayer2)
-    local team = {
-        players = {coninchePlayer1, coinchePlayer2},
-        gameScore = 0,
-        roundScore = 0
-    }
+function CreateTeam(player1, player2)
+    local team = {players = {player1, player2}}
 
-    coninchePlayer1.team = team
-    coinchePlayer2.team = team
+    player1.team = team
+    player2.team = team
     return team
 end
 
-local masterDeck = getObjectFromGUID("deckGuid")
-masterDeck.hide()
-local gameDeck = masterDeck.clone();
+MasterDeck = getObjectFromGUID(MasterDeckGuid)
+MasterDeck.hide()
 
-PlayerN = CreateCoinchePlayer("Green", 1)
-PlayerE = CreateCoinchePlayer("Red", 2)
-PlayerS = CreateCoinchePlayer("Blue", 3)
-PlayerW = CreateCoinchePlayer("Yellow", 4)
-
-TeamNS = CreateTeam(PlayerN, PlayerS)
-TeamEW = CreateTeam(PlayerE, PlayerW)
-Teams = {TeamNS, TeamEW}
+PlayerN = CreateCoinchePlayer("Green")
+PlayerE = CreateCoinchePlayer("Red")
+PlayerS = CreateCoinchePlayer("Blue")
+PlayerW = CreateCoinchePlayer("Yellow")
 
 PlayersInOrder = {PlayerN, PlayerE, PlayerS, PlayerW}
 
 PlayersByColor = {}
-for _, player in pairs(PlayersInOrder) do PlayersByColor[player.color] = player end
+for index, player in pairs(PlayersInOrder) do
+    player.index = index
+    PlayersByColor[player.color] = player
+end
+
+TeamNS = CreateTeam(PlayerN, PlayerS)
+TeamEW = CreateTeam(PlayerE, PlayerW)
 
 function GetNextPlayerIndex(currentPlayerIndex)
     return (currentPlayerIndex % 4) + 1
 end
 
 function GameLoop()
-    gameDeck.shuffle()
     TeamNS.gameScore = 0
     TeamEW.gameScore = 0
 
     local firstPlayerIndex = 1
     while TeamNS.gameScore < 1000 and TeamEW.gameScore < 1000 do
+        local gameDeck = MasterDeck.clone();
+        gameDeck.shuffle()
+        gameDeck.deal(3)
+        gameDeck.deal(2)
+        gameDeck.deal(3)
         local roundInfo = AnnonceLoop(firstPlayerIndex)
         if roundInfo ~= nil then RoundLoop(roundInfo, firstPlayerIndex) end
         firstPlayerIndex = GetNextPlayerIndex(firstPlayerIndex)
+        gameDeck.destruct()
     end
 
     local winner = (TeamNS.gameScore >= 1000) and TeamNS or TeamEW;
@@ -191,7 +189,7 @@ function RoundLoop(roundInfo, firstPlayerIndex)
         local turnWinner = GetTurnHighestPlayer(turnInfo)
         turnWinner.team.roundScore = turnWinner.team.roundScore +
                                          ComputeScore(turnInfo.cardsByPlayer)
-        CleanBoard()
+        CleanBoard(turnInfo)
         currentPlayerIndex = turnWinner.index
     end
 
@@ -205,6 +203,10 @@ function RoundLoop(roundInfo, firstPlayerIndex)
         otherTeam.gameScore = otherTeam.gameScore + score
         RoundLost(roundInfo)
     end
+end
+
+function CleanBoard(turnInfo)
+    for _, card in pairs(turnInfo.cardsByPlayer) do card.destruct() end
 end
 
 function PlayTurn(firstPlayerIndex, atoutColor)
@@ -231,14 +233,14 @@ function PlayCard(player, turnInfo)
     local allowedCards = {}
     for _, card in pairs(player.hand) do
         if IsCardAllowed(card, player, turnInfo) then
-            card.highlight()
+            card.highlightOn("Yellow")
             allowedCards[#allowedCards + 1] = card
         end
     end
-    
-    local playedCard = nil --get the card the player just played
 
-    for _, card in allowedCards do card.unhighlight() end
+    local playedCard = nil -- get the card the player just played
+
+    for _, card in allowedCards do card.highlightOff() end
 
     return playedCard
 end

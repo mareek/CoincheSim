@@ -13,28 +13,41 @@ function BuildIndexOfMap(array)
     return indexOfMap
 end
 
+function GetCardColor(card)
+    -- c'est moins simple que ça dans la vraie vie
+    return card.color
+end
+
+function GetCardFigure(card)
+    -- c'est moins simple que ça dans la vraie vie
+    return card.figure
+end
+
 function CompareCards(firstCard, secondCard, turnInfo)
-    if firstCard.color == secondCard.color then
+    local firstCardColor = GetCardColor(firstCard)
+    local secondCardColor = GetCardColor(secondCard)
+    if firstCardColor == secondCardColor then
         local function sameColorCompare(orderMap)
-            if orderMap[firstCard.figure] < orderMap[secondCard.figure] then
+            if orderMap[GetCardFigure(firstCard)] <
+                orderMap[GetCardFigure(secondCard)] then
                 return 1
             else
                 return -1
             end
         end
-        if firstCard.color == turnInfo.atoutColor then
+        if firstCardColor == turnInfo.atoutColor then
             return sameColorCompare(AtoutOrderMap)
         else
             return sameColorCompare(NonAtoutOrderMap)
         end
     else
-        if firstCard.color == turnInfo.atoutColor then
+        if firstCardColor == turnInfo.atoutColor then
             return 1
-        elseif secondCard.color == turnInfo.atoutColor then
+        elseif secondCardColor == turnInfo.atoutColor then
             return -1
-        elseif firstCard.color == turnInfo.expectedColor then
+        elseif firstCardColor == turnInfo.expectedColor then
             return 1
-        elseif secondCard.color == turnInfo.expectedColor then
+        elseif secondCardColor == turnInfo.expectedColor then
             return -1
         else
             return 0
@@ -59,19 +72,21 @@ end
 function GetTurnHighestCard(turnInfo) return GetTurnHighest(turnInfo).card end
 
 function GetCardValue(card, atoutColor)
-    if card.color == atoutColor and card.figure == "Jack" then
+    local cardColor = GetCardColor(card)
+    local cardFigure = GetCardFigure(card)
+    if cardColor == atoutColor and cardFigure == "Jack" then
         return 20
-    elseif card.color == atoutColor and card.figure == "9" then
+    elseif cardColor == atoutColor and cardFigure == "9" then
         return 14
-    elseif card.figure == "1" then
+    elseif cardFigure == "1" then
         return 11
-    elseif card.figure == "10" then
+    elseif cardFigure == "10" then
         return 10
-    elseif card.figure == "King" then
+    elseif cardFigure == "King" then
         return 4
-    elseif card.figure == "Queen" then
+    elseif cardFigure == "Queen" then
         return 3
-    elseif card.figure == "Jack" then
+    elseif cardFigure == "Jack" then
         return 2
     else
         return 0
@@ -87,7 +102,7 @@ function ComputeScore(cards, atoutColor)
 end
 
 function CreateCoinchePlayer(color)
-    return {player = Player[color], color = color, hand = {}, team = nil}
+    return {ttsPlayer = Player[color], color = color, team = nil}
 end
 
 function CreateTeam(player1, player2)
@@ -100,6 +115,7 @@ end
 
 MasterDeck = getObjectFromGUID(MasterDeckGuid)
 MasterDeck.hide()
+MasterDeck.setLock(true)
 
 PlayerN = CreateCoinchePlayer("Green")
 PlayerE = CreateCoinchePlayer("Red")
@@ -128,6 +144,7 @@ function GameLoop()
     local firstPlayerIndex = 1
     while TeamNS.gameScore < 1000 and TeamEW.gameScore < 1000 do
         local gameDeck = MasterDeck.clone();
+        gameDeck.setLock(false)
         gameDeck.shuffle()
         gameDeck.deal(3)
         gameDeck.deal(2)
@@ -150,7 +167,7 @@ function AnnonceLoop(firstPlayerIndex)
 
     while passCount < 3 or (passCount == 3 and runningTeam == nil) do
         local currentPlayer = PlayersInOrder[currentPlayerIndex]
-        local playerStake = GetPlayerStake(currentPlayer)
+        local playerStake = GetPlayerStake(currentPlayer, currentStake)
         if playerStake == "coinche" then
             isCoinche = true
             break
@@ -213,7 +230,7 @@ function PlayTurn(firstPlayerIndex, atoutColor)
     local currentPlayer = PlayersInOrder[firstPlayerIndex]
     local card = PlayCard(currentPlayer)
     local turnInfo = {
-        expectedColor = card.color,
+        expectedColor = GetCardColor(card),
         atoutColor = atoutColor,
         cardsByPlayer = {}
     }
@@ -230,29 +247,34 @@ function PlayTurn(firstPlayerIndex, atoutColor)
 end
 
 function PlayCard(player, turnInfo)
-    local allowedCards = {}
-    for _, card in pairs(player.hand) do
+    local hand = player.ttsPlayer.getHandObjects()
+    for _, card in pairs(hand) do
         if IsCardAllowed(card, player, turnInfo) then
             card.highlightOn("Yellow")
-            allowedCards[#allowedCards + 1] = card
+        else
+            card.setLock(true)
         end
     end
 
     local playedCard = nil -- get the card the player just played
 
-    for _, card in allowedCards do card.highlightOff() end
+    for _, card in pairs(hand) do
+        card.highlightOff()
+        card.setLock(false)
+    end
 
     return playedCard
 end
 
 function IsCardAllowed(card, player, turnInfo)
+    local cardColor = GetCardColor(card)
     if turnInfo == nil then
         return true
-    elseif card.color ~= turnInfo.expectedColor and
+    elseif cardColor ~= turnInfo.expectedColor and
         HasColorInHand(player, turnInfo.expectedColor) then
         return false
-    elseif card.color ~= turnInfo.atoutColor then
-        if card.color == turnInfo.expectedColor then
+    elseif cardColor ~= turnInfo.atoutColor then
+        if cardColor == turnInfo.expectedColor then
             return true
         elseif GetTurnHighestPlayer(turnInfo).team == player.team then
             return true
@@ -264,13 +286,15 @@ function IsCardAllowed(card, player, turnInfo)
     else
         -- Atout
         local highestCard = GetTurnHighestCard(turnInfo)
-        if highestCard.color ~= turnInfo.atoutColor then
+        local highestCardColor = GetCardColor(highestCard)
+        if highestCardColor ~= turnInfo.atoutColor then
             return true
         elseif CompareCards(card, highestCard, turnInfo) > 0 then
             return true
         else
-            for _, handCard in pairs(player.hand) do
-                if handCard.color == highestCard.color and
+            local hand = player.ttsPlayer.getHandObjects()
+            for _, handCard in pairs(hand) do
+                if GetCardColor(handCard) == highestCardColor and
                     CompareCards(handCard, highestCard, turnInfo) > 0 then
                     return false
                 end
@@ -281,8 +305,9 @@ function IsCardAllowed(card, player, turnInfo)
 end
 
 function HasColorInHand(player, color)
-    for _, card in pairs(player.hand) do
-        if card.color == color then return true end
+    local hand = player.ttsPlayer.getHandObjects()
+    for _, card in pairs(hand) do
+        if GetCardColor(card) == color then return true end
     end
 
     return false

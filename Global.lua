@@ -1,10 +1,10 @@
 MasterDeckGuid = ""
 
 AtoutOrderMap = BuildIndexOfMap({
-    "Jack", "9", "1", "10", "King", "Queen", "8", "7"
+    "Jack", "9", "Ace", "10", "King", "Queen", "8", "7"
 })
 NonAtoutOrderMap = BuildIndexOfMap({
-    "1", "10", "King", "Queen", "Jack", "9", "8", "7"
+    "Ace", "10", "King", "Queen", "Jack", "9", "8", "7"
 })
 
 function BuildIndexOfMap(array)
@@ -14,13 +14,15 @@ function BuildIndexOfMap(array)
 end
 
 function GetCardColor(card)
-    -- c'est moins simple que ça dans la vraie vie
-    return card.color
+    local name = card.nickName
+    local ofPosition = name:find(" of ")
+    return name:sub(ofPosition + 4)
 end
 
 function GetCardFigure(card)
-    -- c'est moins simple que ça dans la vraie vie
-    return card.figure
+    local name = card.nickName
+    local ofPosition = name:find(" of ")
+    return name:sub(1, ofPosition - 1)
 end
 
 function CompareCards(firstCard, secondCard, turnInfo)
@@ -78,7 +80,7 @@ function GetCardValue(card, atoutColor)
         return 20
     elseif cardColor == atoutColor and cardFigure == "9" then
         return 14
-    elseif cardFigure == "1" then
+    elseif cardFigure == "Ace" then
         return 11
     elseif cardFigure == "10" then
         return 10
@@ -157,8 +159,8 @@ function GameLoop()
 
     local winner = (TeamNS.gameScore >= 1000) and TeamNS or TeamEW;
 
-    --broadcast( message,  Color)
-    --https://api.tabletopsimulator.com/player/#broadcast
+    -- broadcast( message,  Color)
+    -- https://api.tabletopsimulator.com/player/#broadcast
 end
 
 function AnnonceLoop(firstPlayerIndex)

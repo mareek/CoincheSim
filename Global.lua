@@ -156,6 +156,9 @@ function GameLoop()
     end
 
     local winner = (TeamNS.gameScore >= 1000) and TeamNS or TeamEW;
+
+    --broadcast( message,  Color)
+    --https://api.tabletopsimulator.com/player/#broadcast
 end
 
 function AnnonceLoop(firstPlayerIndex)
@@ -256,8 +259,11 @@ function PlayCard(player, turnInfo)
         end
     end
 
-    local playedCard = nil -- get the card the player just played
-
+    local playedCard = nil
+    --[[ get the card the player just played
+        use this event: function onObjectDrop(obj, colorName)
+        https://api.tabletopsimulator.com/event/#onobjectdrop
+        --]]
     for _, card in pairs(hand) do
         card.highlightOff()
         card.setLock(false)

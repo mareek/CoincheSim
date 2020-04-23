@@ -1,0 +1,55 @@
+<!-- Xml UI. See documentation: https://api.tabletopsimulator.com/ui/introUI/ -->
+
+<!-- Start game panel -->
+<Panel id="start-game-panel" width="100" height="100">
+    <Button onClick="UI_StartGameClicked">C'est parti!</Button>
+</Panel>
+
+<!-- Annonce panel -->
+<Panel id="annonce-panel" active="false">
+    <Button color="orange" 
+            width="200" 
+            height="200" 
+            tooltip="Coincher!"
+            tooltipPosition="Below" 
+            resizeTextForBestFit="true">
+        ¯\_(ツ) ┬──┬
+    </Button>
+    <Panel  color="blue" 
+            width="150" 
+            height="100" 
+            allowDragging="true" 
+            returnToOriginalPositionWhenReleased="false"
+            rectAlignment="MiddleRight">
+        <VerticalLayout>
+            <HorizontalLayout >
+                <Button>-10</Button>
+                <Text>120 ♦</Text>
+                <Button>+10</Button>
+            </HorizontalLayout>
+            <HorizontalLayout>
+                <ToggleGroup>
+                    <VerticalLayout>
+                        <HorizontalLayout>
+                            <Toggle>♦</Toggle>
+                            <Toggle>♣</Toggle>
+                        </HorizontalLayout>
+                        <HorizontalLayout>
+                            <Toggle>♠</Toggle>
+                            <Toggle>♥</Toggle>
+                        </HorizontalLayout>
+                    </VerticalLayout>
+                </ToggleGroup>
+                <VerticalLayout>
+                    <Button>Annoncer</Button>
+                </VerticalLayout>
+            </HorizontalLayout>
+        </VerticalLayout>
+    </Panel>
+</Panel>
+
+<Panel active="false">Contrat panel</Panel>
+
+<Panel active="false">Playing panel</Panel>
+
+<Panel active="false">Scores panel</Panel>

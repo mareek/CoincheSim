@@ -1,5 +1,15 @@
+function onLoad(save_state)
+    UPD_EnterStartup()
+end
+
 do -- Game logic
-    MasterDeckGuid = ""
+    MasterDeckGuid = "91a70f"
+
+    function BuildIndexOfMap(array)
+        local indexOfMap = {}
+        for k, v in pairs(array) do indexOfMap[v] = k end
+        return indexOfMap
+    end
 
     AtoutOrderMap = BuildIndexOfMap({
         "Jack", "9", "Ace", "10", "King", "Queen", "8", "7"
@@ -7,12 +17,6 @@ do -- Game logic
     NonAtoutOrderMap = BuildIndexOfMap({
         "Ace", "10", "King", "Queen", "Jack", "9", "8", "7"
     })
-
-    function BuildIndexOfMap(array)
-        local indexOfMap = {}
-        for k, v in pairs(array) do indexOfMap[v] = k end
-        return indexOfMap
-    end
 
     function GetCardColor(card)
         local name = card.nickName
@@ -119,7 +123,7 @@ do -- Game logic
     end
 
     MasterDeck = getObjectFromGUID(MasterDeckGuid)
-    MasterDeck.hide()
+    -- MasterDeck.hide()
     MasterDeck.setLock(true)
 
     PlayerN = CreateCoinchePlayer("Green")
@@ -130,6 +134,7 @@ do -- Game logic
     PlayersInOrder = {PlayerN, PlayerE, PlayerS, PlayerW}
 
     PlayersByColor = {}
+
     for index, player in pairs(PlayersInOrder) do
         player.index = index
         PlayersByColor[player.color] = player
@@ -142,19 +147,26 @@ do -- Game logic
         return (currentPlayerIndex % 4) + 1
     end
 
+    function GetOpponentTeam(team)
+        return (team == TeamNS) and TeamEW or TeamNS
+    end
+
     function GameLoop()
+        log("GameLoop start")
+        UPD_LeaveStartup()
         TeamNS.gameScore = 0
         TeamEW.gameScore = 0
 
         local firstPlayerIndex = 1
         while TeamNS.gameScore < 1000 and TeamEW.gameScore < 1000 do
-            local gameDeck = MasterDeck.clone();
-            gameDeck.setLock(false)
-            gameDeck.shuffle()
-            gameDeck.deal(3)
-            gameDeck.deal(2)
-            gameDeck.deal(3)
+            -- local gameDeck = MasterDeck.clone()
+            -- gameDeck.setLock(false)
+            -- gameDeck.shuffle()
+            -- gameDeck.deal(3)
+            -- gameDeck.deal(2)    
+            -- gameDeck.deal(3)
             local roundInfo = AnnonceLoop(firstPlayerIndex)
+            --log(roundInfo)
             if roundInfo ~= nil then
                 RoundLoop(roundInfo, firstPlayerIndex)
             end
@@ -164,11 +176,15 @@ do -- Game logic
 
         local winner = (TeamNS.gameScore >= 1000) and TeamNS or TeamEW;
 
+        UPD_EnterStartup()
+        return 1
         -- broadcast( message,  Color)
         -- https://api.tabletopsimulator.com/player/#broadcast
     end
 
     function AnnonceLoop(firstPlayerIndex)
+        log("AnnonceLoop start")
+        UPD_EnterAnnonce()
         local currentStake = nil
         local passCount = 0
         local runningTeam = nil
@@ -177,7 +193,7 @@ do -- Game logic
 
         while passCount < 3 or (passCount == 3 and runningTeam == nil) do
             local currentPlayer = PlayersInOrder[currentPlayerIndex]
-            local playerStake = GetPlayerStake(currentPlayer, currentStake)
+            local playerStake = WaitPlayerStake(currentPlayer, currentStake, runningTeam)
             if playerStake == "coinche" then
                 isCoinche = true
                 break
@@ -187,17 +203,20 @@ do -- Game logic
                 passCount = 0
                 currentStake = playerStake
                 runningTeam = currentPlayer.team
+                UPD_DisplayCurrentStake(currentStake)
+                UPD_DisplayCoincheButton(GetOpponentTeam(runningTeam))
             end
 
             currentPlayerIndex = GetNextPlayerIndex(currentPlayerIndex)
         end
 
+        log("AnnonceLoop end")
         if currentStake == nil then
             return nil
         else
             return {
                 team = runningTeam,
-                otherTeam = (runningTeam == TeamNS) and TeamNS or TeamEW,
+                otherTeam = GetOpponentTeam(runningTeam),
                 atoutColor = currentStake.atoutColor,
                 contract = currentStake.contract,
                 isCoinche = isCoinche
@@ -227,8 +246,7 @@ do -- Game logic
             runningTeam.gameScore = runningTeam.gameScore + score
             RoundWon(roundInfo)
         else
-            local score = roundInfo.isCoinche and (roundInfo.contract * 2) or
-                              160
+            local score = roundInfo.isCoinche and (roundInfo.contract * 2) or 160
             otherTeam.gameScore = otherTeam.gameScore + score
             RoundLost(roundInfo)
         end
@@ -329,9 +347,95 @@ do -- Game logic
     end
 end
 
-do -- UI Interface
-    function UI_StartGameClicked() 
-        print("START GAME")
+do -- Utils
+    function WaitCondition(condition)
+        while not condition() do
+            for i = 1, 100 do -- wait 100 frames
+                coroutine.yield(0)
+            end
+        end
+    end
+end
+
+do -- UI Variables
+    stakeDone = false
+    lastStake = nil
+    tempStake = nil
+end
+
+do -- UI Await user input
+
+    function WaitPlayerStake(player, lastStake)
+        tempStake = nil
+
+        UPD_DisplayStakeSelector(player)
+        UPD_DisplayThinkingPlayer(player)
+        WaitCondition(function() return stakeDone end)
+        UPD_HideStakeSelector()
+        UPD_HideThinkingPlayer()
+
+        stakeDone = false
+        return tempStake
+    end
+end
+
+do -- UI Actions
+    function ACT_StartGame() 
+        startLuaCoroutine(Global, "GameLoop")
+    end
+
+    function ACT_Stake()
+        tempStake = {atoutColor = "hearts", contract = 80}
+        stakeDone = true
+    end
+    function ACT_Pass()
+        stakeDone = true
+    end
+    function ACT_Coinche()
+        tempStake = "coinche"
+        stakeDone = true
+    end
+end
+
+do -- UI Update
+    function UPD_EnterStartup()
+        UI.show("start-game-panel")
+    end
+    function UPD_LeaveStartup()
+        UI.hide("start-game-panel")
+    end
+
+    function UPD_EnterAnnonce()
         UI.show("annonce-panel")
+    end
+    function UPD_LeaveAnnonce()
+        UI.hide("annonce-panel")
+    end
+
+    function UPD_DisplayThinkingPlayer(player)
+        UI.setAttribute("thinking-player", "color", player.color)
+        playerName = player.ttsPlayer.steam_name ~= nil and player.ttsPlayer.steam_name or player.color
+        UI.setValue("thinking-player", playerName .. " is thinking...")
+        UI.show("thinking-player")
+    end
+    function UPD_HideThinkingPlayer()
+        UI.hide("thinking-player")
+    end
+
+    function UPD_DisplayStakeSelector(player)
+        UI.setAttribute("stake-selector", "visibility", player.color)
+    end
+    function UPD_HideStakeSelector()
+        UI.setAttribute("stake-selector", "visibility", nil)
+    end
+
+    function UPD_DisplayCoincheButton(team)
+        visibilityAttribute = team.players[1].color .. "|" .. team.players[2].color
+        UI.setAttribute("coinche-button", "visibility", visibilityAttribute)
+    end
+
+    function UPD_DisplayCurrentStake(currentStake)
+        UI.setValue("current-stake", currentStake.contract .. " " .. currentStake.atoutColor)
+        UI.show("current-stake")
     end
 end

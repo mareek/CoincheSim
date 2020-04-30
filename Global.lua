@@ -219,7 +219,7 @@ function onLoad(save_state)
 
                 currentPlayerIndex = GetNextPlayerIndex(currentPlayerIndex)
             end
-
+            UPD_LeaveAnnonce()
             log("AnnonceLoop end")
             if currentStake == nil then
                 return nil
@@ -372,7 +372,9 @@ function onLoad(save_state)
 
     do -- UI Variables
         stakeDone = false
-        lastStake = nil
+        lastContract = nil
+        tempContract = nil
+        tempColor = nil
         tempStake = nil
     end
 
@@ -381,6 +383,7 @@ function onLoad(save_state)
         function WaitPlayerStake(player, lastStake)
             tempStake = nil
 
+            UPD_ResetStakeSelector(lastStake)
             UPD_DisplayStakeSelector(player)
             UPD_DisplayThinkingPlayer(player)
             WaitCondition(function() return stakeDone end)
@@ -398,7 +401,7 @@ function onLoad(save_state)
         end
 
         function ACT_Stake()
-            tempStake = {atoutColor = "hearts", contract = 80}
+            tempStake = {atoutColor = tempColor, contract = tempContract}
             stakeDone = true
         end
         function ACT_Pass()
@@ -407,6 +410,37 @@ function onLoad(save_state)
         function ACT_Coinche()
             tempStake = "coinche"
             stakeDone = true
+        end
+        function ACT_LowerStake()
+            tempContract = tempContract - 10
+            UPD_TempStakeDisplay()
+        end
+        function ACT_IncreaseStake()
+            tempContract = tempContract + 10
+            UPD_TempStakeDisplay()
+        end
+
+        function ACT_ChangeAtoutColorDiamonds(_, checked)
+            ACT_ChangeAtoutColor("diamonds", checked)
+        end
+        function ACT_ChangeAtoutColorClubs(_, checked)
+            ACT_ChangeAtoutColor("clubs", checked)
+        end
+        function ACT_ChangeAtoutColorSpades(_, checked)
+            ACT_ChangeAtoutColor("spades", checked)
+        end
+        function ACT_ChangeAtoutColorHearts(_, checked)
+            ACT_ChangeAtoutColor("hearts", checked)
+        end
+
+        function ACT_ChangeAtoutColor(color, checked)
+            if(checked) then
+                tempColor = color
+                UI.setAttribute("stake-button", "interactable", true)
+            else
+                tempColor = nil
+                UI.setAttribute("stake-button", "interactable", false)
+            end
         end
     end
 
@@ -435,6 +469,16 @@ function onLoad(save_state)
             UI.hide("thinking-player")
         end
 
+        function UPD_ResetStakeSelector(lastStake)
+            lastContract = lastStake ~= nil and lastStake.contract or nil
+            tempContract = lastStake ~= nil and lastStake.contract + 10 or 80
+            UPD_TempStakeDisplay()
+            UI.setAttribute("stake-button", "interactable", false)
+            UI.setAttribute("stake-diamonds", "isOn", false)
+            UI.setAttribute("stake-clubs", "isOn", false)
+            UI.setAttribute("stake-spades", "isOn", false)
+            UI.setAttribute("stake-hearts", "isOn", false)
+        end
         function UPD_DisplayStakeSelector(player)
             UI.setAttribute("stake-selector", "visibility", player.color)
         end
@@ -450,6 +494,14 @@ function onLoad(save_state)
         function UPD_DisplayCurrentStake(currentStake)
             UI.setValue("current-stake", currentStake.contract .. " " .. currentStake.atoutColor)
             UI.show("current-stake")
+        end
+        function UPD_TempStakeDisplay()
+            local lowerButtonActive = lastContract ~= nil and tempContract > lastContract + 10 or lastContract == nil and tempContract > 80
+            UI.setAttribute("lower-stake", "interactable", lowerButtonActive)
+            local increaseButtonActive = tempContract < 160
+            UI.setAttribute("increase-stake", "interactable", increaseButtonActive)
+            
+            UI.setValue("temp-stake", tempContract)
         end
     end
     

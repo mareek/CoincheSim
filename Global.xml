@@ -1,0 +1,81 @@
+<!-- Xml UI. See documentation: https://api.tabletopsimulator.com/ui/introUI/ -->
+
+<!-- Start game panel -->
+<Panel  id="start-game-panel" 
+        width="200"
+        height="200"
+        active="false">
+    <Button fontSize="40" onClick="ACT_StartGame">Nouvelle partie</Button>
+</Panel>
+
+<!-- Display who is taking too long to play-->
+<Text   id="thinking-player"
+        height="50"
+        resizeTextForBestFit="true"
+        offsetXY="0 -200"
+        rectAlignment="UpperCenter"
+        active="false"/>
+
+<!-- Annonce panel -->
+<Panel id="annonce-panel" active="false">
+    <Button id="coinche-button"
+            color="orange"
+            width="200"
+            height="200"
+            tooltip="Coincher!"
+            tooltipPosition="Below"
+            resizeTextForBestFit="true"
+            visibility="nil"
+            onClick="ACT_Coinche">
+        ¯\_(ツ) ┬──┬
+    </Button>
+    <Panel  id="stake-selector"
+            color="grey"
+            width="300"
+            height="200"
+            fontSize="40"
+            allowDragging="true"
+            returnToOriginalPositionWhenReleased="false"
+            rectAlignment="MiddleRight"
+            visibility="nil">
+        <VerticalLayout>
+            <HorizontalLayout height="30">
+                <Button id="lower-stake" onClick="ACT_LowerStake">-</Button>
+                <Text id="temp-stake"></Text>
+                <Button id="increase-stake" onClick="ACT_IncreaseStake">+</Button>
+            </HorizontalLayout>
+            <HorizontalLayout>
+                <ToggleGroup allowSwitchOff="true">
+                    <VerticalLayout>
+                        <HorizontalLayout>
+                            <ToggleButton id="stake-diamonds" onValueChanged="ACT_ChangeAtoutColorDiamonds">♦</ToggleButton>
+                            <ToggleButton id="stake-clubs" onValueChanged="ACT_ChangeAtoutColorClubs">♣</ToggleButton>
+                        </HorizontalLayout>
+                        <HorizontalLayout>
+                            <ToggleButton id="stake-spades" onValueChanged="ACT_ChangeAtoutColorSpades">♠</ToggleButton>
+                            <ToggleButton id="stake-hearts" onValueChanged="ACT_ChangeAtoutColorHearts">♥</ToggleButton>
+                        </HorizontalLayout>
+                    </VerticalLayout>
+                </ToggleGroup>
+                <VerticalLayout>
+                    <Button id="stake-button" onClick="ACT_Stake">Annoncer</Button>
+                    <Button onClick="ACT_Pass">Passer</Button>
+                </VerticalLayout>
+            </HorizontalLayout>
+        </VerticalLayout>
+    </Panel>
+</Panel>
+
+<!-- Display the current stake -->
+<Text   id="current-stake"
+        height="30"
+        width="100"
+        color="white"
+        resizeTextForBestFit="true"
+        offsetXY="0 -100"
+        rectAlignment="UpperRight"
+        active="false"/>
+
+<Panel active="false">Playing panel</Panel>
+
+<Panel active="false">Scores panel</Panel>
